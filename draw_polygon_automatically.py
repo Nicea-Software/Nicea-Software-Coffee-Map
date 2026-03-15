@@ -157,7 +157,41 @@ def get_distance_between_neighboring_pixels(pixel_position1, pixel_position2):
         distance = abs(pixel_position1[0]  - pixel_position2[0]) + abs(pixel_position1[1]  - pixel_position2[1])
     return distance
 
+def search_for_diagnonal_point_closest_to_white(original_search_angle, current_point, search_distance, raster_layer):
+    if original_search_angle == 315 or original_search_angle == 225:
+        new_search_interval = search_distance/10
+    elif original_search_angle == 45 or original_search_angle == 135:
+        new_search_interval = -search_distance/10
+    else:
+        raise ValueError("Angle must be 45, 135, 225, 315")
 
+    # previous_point = current_point.y()
+    # current_y = current_point.y() + new_search_interval
+    # current_x = current_point.x()
+
+    previous_point = current_point
+    current_x = previous_point.x()
+    current_y = previous_point.y()
+
+
+    while get_pixel_value_at_point(raster_layer, QgsPointXY(current_x, current_y)) == 0:
+        previous_point = QgsPointXY(current_x, current_y)
+        if original_search_angle == 45 or original_search_angle == 225:
+            current_x = current_x + new_search_interval
+        else:
+            current_y = current_y + new_search_interval
+    
+    return previous_point
+
+
+    current_point_x = current_point.x()
+    current_point_y = current_point.y()
+
+def is_pixel_in_range(point_1, point_2, search_distance):
+    distance = math.sqrt((point_1.x() - point_2.x())**2 + (point_1.y() - point_2.y())**2)
+    # print("Distance between first and last point: " + str(distance))
+    # print("Search distance: " + str(search_distance))
+    return distance > search_distance
 
 def start_drawing_polygon_from_point(start_point, search_distance, raster_layer, canvas):
     current_x = start_point.x()
@@ -181,13 +215,19 @@ def start_drawing_polygon_from_point(start_point, search_distance, raster_layer,
     loop_count = 0
     # Need to check what band 1,2,3 values are for black and white and make sure we are using the true black and white values
     f = open('/tmp/logs.txt', 'w')
-    while ((list_of_points[0] != list_of_points[-1] or len(list_of_points) == 1)) and len(list_of_points) < 5000:
-        
+    
+
+    # while ((list_of_points[0] != list_of_points[-1] or len(list_of_points) == 1)) and len(list_of_points) < 10000:
+    while ((is_pixel_in_range(list_of_points[0], list_of_points[-1], search_distance) or len(list_of_points) < 5)):
         # search_radius = pixel_width * 3
         print(len(list_of_points))
         f.write(str(len(list_of_points)) + '\n')
         tracked_point = list_of_points[-1]
+        search_values = [0]
 
+        pixel_width = raster_layer.rasterUnitsPerPixelX()
+        search_distance = math.sqrt(pixel_width ** 2 + pixel_width ** 2)
+        edge_case_2 = False
         # We need to find the white pixel closest to the current point in a radial sweep
         first_black_pixel_is_previous_angle = False
         previous_point = None
@@ -197,7 +237,7 @@ def start_drawing_polygon_from_point(start_point, search_distance, raster_layer,
         # w | b
         # or 
         # w | b
-        # b | b
+        # b | w
 
         _45_x =  1.5 * search_distance * math.cos(math.radians(45)) + current_x
         _45_y =  1.5 * search_distance * math.sin(math.radians(45)) + current_y
@@ -219,32 +259,88 @@ def start_drawing_polygon_from_point(start_point, search_distance, raster_layer,
         f.write("_135_value: " + str(_135_value) + "\n")
         f.write("_225_value: " + str(_225_value) + "\n")
         f.write("_315_value: " + str(_315_value) + "\n")
-        
-        if (_45_value == 0 and _225_value == 0) and (_135_value != 0 and _315_value != 0):
+
+        if ((_45_value == 0 and _225_value == 0) and (_135_value != 0 and _315_value != 0)):
             # Now move to figure out what is the correct angle 45 or 225 it depends on previous angle
             # Also we check whether previous angle is within 45 degrees of the angle
-            if (previous_angle != 45 and previous_angle != 90 and previous_angle != 0):
+            # Then to prevent crossing to other side of border we find the closest point to white pixel.
+            if (previous_angle > 90 ):
                 previous_angle = 225
-                list_of_points.append(QgsPointXY(_45_x, _45_y))
-            elif (previous_angle != 225 and previous_angle != 270 and previous_angle != 180):
+                f.write("Angle found: 45\n")
+                new_point = search_for_diagnonal_point_closest_to_white(45, QgsPointXY(_45_x, _45_y), search_distance, raster_layer)
+            elif (previous_angle < 180 or previous_angle > 270):
                 previous_angle = 45
-                list_of_points.append(QgsPointXY(_225_x, _225_y))
-
+                f.write("Angle found: 225\n")
+                new_point = search_for_diagnonal_point_closest_to_white(225, QgsPointXY(_225_x, _225_y), search_distance, raster_layer)
+                
+            list_of_points.append(new_point)
             current_x = list_of_points[-1].x()
             current_y = list_of_points[-1].y()
+            f.write("Coordinante Added:  " + str(list_of_points[-1].x()) + ',' + str(list_of_points[-1].y()) + '\n')
             continue
 
         elif (_45_value != 0 and _225_value != 0) and (_135_value == 0 and _315_value == 0):
-            if (previous_angle != 315 and previous_angle != 270 and previous_angle != 0):
+            if (previous_angle < 270 and previous_angle != 0):
                 previous_angle = 135
-                list_of_points.append(QgsPointXY(_315_x, _315_y))
-            elif (previous_angle != 135 and previous_angle != 90 and previous_angle != 180):
+                f.write("Angle found: 315\n")
+                new_point = search_for_diagnonal_point_closest_to_white(315, QgsPointXY(_315_x, _315_y), search_distance, raster_layer)
+            elif (previous_angle < 90 or previous_angle > 180):
                 previous_angle = 315
-                list_of_points.append(QgsPointXY(_135_x, _135_y))
+                f.write("Angle found: 135\n")
+                new_point = search_for_diagnonal_point_closest_to_white(135, QgsPointXY(_135_x, _135_y), search_distance, raster_layer) 
 
+            list_of_points.append(new_point)
             current_x = list_of_points[-1].x()
             current_y = list_of_points[-1].y()
+            f.write("Coordinante Added:  " + str(list_of_points[-1].x()) + ',' + str(list_of_points[-1].y()) + '\n')
             continue
+        elif (_45_value != 0 and _225_value != 0 and _135_value != 0 and _315_value != 0):
+            f.write("Edge case 3 triggered\n")
+            x = search_distance * math.cos(math.radians(0)) + current_x
+            y = search_distance * math.sin(math.radians(0)) + current_y
+            list_of_points.append(QgsPointXY(x, y))
+            previous_angle = 180
+            f.write("Coordinante Added:  " + str(list_of_points[-1].x()) + ',' + str(list_of_points[-1].y()) + '\n')
+            current_x = x
+            current_y = y
+            continue
+            
+        
+        
+        # There is a situation where we have no black pixels in our search
+        # except for the previous angle 90 degrees away from our current angle 
+        # Therefore it doubles back on itself in the aggregate
+        #  lw | w
+        #  b  | w
+        # Therefore we should aim in these situtions to go in the 1st quadrant
+        # This is mostly a particular problem with the raster we are on not coloring its 
+        # pixels alawys completely
+
+
+        _270_x = 1.5 * search_distance * math.cos(math.radians(270)) + current_x
+        _270_y = 1.5 * search_distance * math.sin(math.radians(270)) + current_y
+        
+        _270_value = get_pixel_value_at_point(raster_layer, QgsPointXY(_270_x, _270_y))
+        if (_225_value == 0 and _270_value == 0 and  (_45_value > 0 and _45_value < 10 )and _135_value != 0 and _315_value != 0 ):
+            
+            f.write("Edge case 2 triggered\n")
+            f.write("Utilizing Alternative Trace values\n")
+            edge_case_2 = True
+            search_distance = 1.5 * search_distance
+            search_values = [ _45_value ]
+        elif (_45_value != 0 and _225_value == 0 and previous_angle == 225) and (_135_value != 0 and _315_value != 0):
+            f.write("Edge case 3 triggered\n")
+            f.write("Just adding 0 degree poin")
+            _0_x = search_distance * math.cos(math.radians(0)) + current_x
+            _0_y = search_distance * math.sin(math.radians(0)) + current_y
+            previous_angle = 0
+            current_x = _0_x
+            current_y = _0_y
+            previous_point = QgsPointXY(_0_x, _0_y)
+            list_of_points.append(QgsPointXY(_0_x, _0_y))
+            f.write("Coordinante Added:  " + str(list_of_points[-1].x()) + ',' + str(list_of_points[-1].y()) + '\n')
+            continue
+        # elif (_45_value != 0 and previous_angle != )
 
         for angle in range(0, 360, 45):
             f.write("searching at angle: " + str(angle) + '\n')
@@ -264,7 +360,7 @@ def start_drawing_polygon_from_point(start_point, search_distance, raster_layer,
 
             if not first_black_pixel_is_previous_angle:
                 pixel_value = get_pixel_value_at_point(raster_layer, QgsPointXY(new_x, new_y))
-                if pixel_value == 0:
+                if pixel_value in search_values:
                     if previous_angle is None:
                         if previous_point is not None:
                             f.write("adding point 1\n")
@@ -311,7 +407,7 @@ def start_drawing_polygon_from_point(start_point, search_distance, raster_layer,
                     previous_point =  QgsPointXY(new_x, new_y) 
             else:
          
-                if get_pixel_value_at_point(raster_layer, QgsPointXY(new_x, new_y)) != 0:
+                if get_pixel_value_at_point(raster_layer, QgsPointXY(new_x, new_y)) not in search_values:
                     if previous_point is not None and previous_angle is not angle - 45:
                         f.write("adding point 4\n")
                         previous_angle = (angle - 45 + 180) % 360
@@ -321,7 +417,7 @@ def start_drawing_polygon_from_point(start_point, search_distance, raster_layer,
                         # print("switching mode because not valid white point is found")
                         previous_point = QgsPointXY(new_x, new_y)
                         first_black_pixel_is_previous_angle = False
-                elif get_pixel_value_at_point(raster_layer, QgsPointXY(new_x, new_y)) == 0 and previous_angle == angle:
+                elif get_pixel_value_at_point(raster_layer, QgsPointXY(new_x, new_y)) in search_values and previous_angle == angle:
                     f.write("found previous angle\n")
                     f.write("switching mode because we found previous angle looking for non white point\n")
                     first_black_pixel_is_previous_angle = False
@@ -339,15 +435,16 @@ def start_drawing_polygon_from_point(start_point, search_distance, raster_layer,
             x = search_distance * math.cos(math.radians(0)) + current_x
             y = search_distance * math.sin(math.radians(0)) + current_y
 
-            if get_pixel_value_at_point(raster_layer, QgsPointXY(x, y)) !=  0:
+            f.write("edge_case_2: " + str(edge_case_2) + '\n')
+            if get_pixel_value_at_point(raster_layer, QgsPointXY(x, y)) not in search_values and edge_case_2 == False:
+            
                 f.write("Last default point is white.  We will go to a black point\n")
                 for angle in range(315, 45, -45):
-                    
                     x =  search_distance * math.cos(math.radians(angle)) + current_x
                     y = search_distance * math.sin(math.radians(angle)) + current_y
                     f.write(str(get_pixel_value_at_point(raster_layer, QgsPointXY(x, y))) + '\n' )
                     f.write(str(angle) + '\n')
-                    if get_pixel_value_at_point(raster_layer, QgsPointXY(x, y)) == 0:
+                    if get_pixel_value_at_point(raster_layer, QgsPointXY(x, y)) in search_values:
                         break
             list_of_points.append(QgsPointXY(x, y))
             previous_angle = 180
@@ -361,6 +458,7 @@ def start_drawing_polygon_from_point(start_point, search_distance, raster_layer,
         current_x = list_of_points[-1].x()
         current_y = list_of_points[-1].y()
 
+    list_of_points.append(list_of_points[0])
 
     layer = create_polyline_layer("AutoDrawn_Polygon", raster_layer.crs().authid())
     # polyline = QgsRubberBand(canvas)
@@ -390,7 +488,6 @@ class PointTool(QgsMapToolEmitPoint):
                 pixel_value = results.results().get(1)  # band 1
                 pixel_width = self.map_layer.rasterUnitsPerPixelX()
                 search_distance = math.sqrt(pixel_width ** 2 + pixel_width ** 2)
-
 
                 border_point = find_border_pixels(point.x(), point.y(), pixel_value, search_distance/25, self.map_layer)
                 start_drawing_polygon_from_point(border_point, search_distance, self.map_layer, self.canvas)
