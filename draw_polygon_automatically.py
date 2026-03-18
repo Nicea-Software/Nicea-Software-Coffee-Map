@@ -43,6 +43,7 @@ def smooth_line(input_layer):
         'OUTPUT': 'TEMPORARY_OUTPUT'
     }
     smoothed_layer = processing.run("native:smoothgeometry", parameters)['OUTPUT']
+    return smoothed_layer
 
 
 def create_polyline_layer(layer_name, crs_string="EPSG:4326"):
@@ -467,8 +468,8 @@ def start_drawing_polygon_from_point(start_point, search_distance, raster_layer,
     feature = QgsFeature(layer.fields())
     feature.setGeometry(geometry)
     layer.dataProvider().addFeatures([feature])
-    smooth_line(layer)
-    QgsProject.instance().addMapLayer(layer)
+    smoothed_layer = smooth_line(layer)
+    QgsProject.instance().addMapLayer(smoothed_layer)
 
 
 class PointTool(QgsMapToolEmitPoint):
