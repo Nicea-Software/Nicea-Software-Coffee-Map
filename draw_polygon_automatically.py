@@ -1,10 +1,10 @@
 import math
 import processing
 
-from qgis.core import QgsProject, QgsRaster, QgsPointXY, QgsGeometry, QgsVectorLayer, QgsFeature
+from qgis.core import QgsProject, QgsRaster, QgsPointXY, QgsGeometry, QgsVectorLayer, QgsFeature, QgsFillSymbol, QgsSingleSymbolRenderer
 from qgis.gui import QgsMapToolEmitPoint, QgsRubberBand
 from qgis.PyQt.QtCore import Qt
-
+from PyQt5.QtWidgets import QInputDialog
 
 
 def get_pixel_value_at_point(raster_layer, point):
@@ -37,16 +37,17 @@ def find_border_pixels(x, y, initial_pixel_value, search_distance, raster_layer)
 def smooth_line(input_layer):
     parameters = {
         'INPUT': input_layer,
-        'Iterations': 2,
-        'OFFSET': 0.3,
+        'Iterations': 10,
+        'OFFSET': 0.5,
         'MAX_ANGLE': 180,
         'OUTPUT': 'TEMPORARY_OUTPUT'
     }
     smoothed_layer = processing.run("native:smoothgeometry", parameters)['OUTPUT']
+
     return smoothed_layer
 
 
-def create_polyline_layer(layer_name, crs_string="EPSG:4326"):
+def create_polyline_layer(layer_name, crs_string="Polygon?crs=epsg:4326"):
     """
     Creates a new temporary memory layer for polylines.
     """
@@ -194,7 +195,7 @@ def is_pixel_in_range(point_1, point_2, search_distance):
     # print("Search distance: " + str(search_distance))
     return distance > search_distance
 
-def start_drawing_polygon_from_point(start_point, search_distance, raster_layer, canvas):
+def start_drawing_polygon_from_point(start_point, search_distance, raster_layer, canvas, layer_name):
     current_x = start_point.x()
     current_y = start_point.y()
     list_of_points = [QgsPointXY(current_x, current_y)]
@@ -450,7 +451,7 @@ def start_drawing_polygon_from_point(start_point, search_distance, raster_layer,
             list_of_points.append(QgsPointXY(x, y))
             previous_angle = 180
 
- 
+  
         f.write("Coordinante Added:  " + str(list_of_points[-1].x()) + ',' + str(list_of_points[-1].y()) + '\n')
 
           
@@ -461,15 +462,48 @@ def start_drawing_polygon_from_point(start_point, search_distance, raster_layer,
 
     list_of_points.append(list_of_points[0])
 
-    layer = create_polyline_layer("AutoDrawn_Polygon", raster_layer.crs().authid())
-    # polyline = QgsRubberBand(canvas)
-    geometry = QgsGeometry.fromPolylineXY(list_of_points)
+    layer = QgsVectorLayer('Polygon?crs=epsg:3857', layer_name , 'memory')
+    pr = layer.dataProvider()
+    layer.updateExtents()
 
-    feature = QgsFeature(layer.fields())
-    feature.setGeometry(geometry)
-    layer.dataProvider().addFeatures([feature])
-    smoothed_layer = smooth_line(layer)
-    QgsProject.instance().addMapLayer(smoothed_layer)
+    polygon = QgsFeature()
+    polygon.setGeometry(QgsGeometry.fromPolygonXY([list_of_points]))
+    pr.addFeatures([polygon])
+    layer.updateExtents()
+    QgsProject.instance().addMapLayer(layer)
+
+    props = {
+        'color': 'red',
+        'outline_color': 'blue',
+        'outline_width': '0.5'
+    }
+
+# Apply renderer
+    symbol = QgsFillSymbol.createSimple(props)
+    renderer = QgsSingleSymbolRenderer(symbol)
+    layer.setRenderer(renderer)
+    layer.triggerRepaint()
+
+
+    # layer = create_polyline_layer("AutoDrawn_Polygon", raster_layer.crs().authid())
+    # # polyline = QgsRubberBand(canvas)
+    # # print(type(list_of_points[0]))
+    # # print("list of points: " + str(list_of_points))
+    # geometry = QgsGeometry.fromPolygonXY([list_of_points])
+
+    # feature = QgsFeature(layer.fields())
+    # feature.setGeometry(geometry)
+    # layer.dataProvider().addFeatures([feature])
+    # layer.updateExtents()
+    
+    # symbol = QgsFillSymbol.createSimple({'color': 'cyan', 'outline_color': 'blue', 'style': 'solid'})
+    # QgsFillSymbol.renderPolygon(symbol)
+
+
+    # layer.renderer().setSymbol(symbol)
+
+    # # smoothed_layer = smooth_line(layer)
+    # QgsProject.instance().addMapLayer(layer)
 
 
 class PointTool(QgsMapToolEmitPoint):
@@ -483,15 +517,16 @@ class PointTool(QgsMapToolEmitPoint):
     def handle_click(self, point, button):
         if button == Qt.LeftButton:
             results = self.map_layer.dataProvider().identify(point, QgsRaster.IdentifyFormatValue)
-            print("units per pixel")
-            print(self.map_layer.rasterUnitsPerPixelX())
+            
+            layer_name, ok = QInputDialog.getText(iface.mainWindow(), "Input", "Enter Layer name: ")
+            
             if results.isValid():
                 pixel_value = results.results().get(1)  # band 1
                 pixel_width = self.map_layer.rasterUnitsPerPixelX()
                 search_distance = math.sqrt(pixel_width ** 2 + pixel_width ** 2)
 
                 border_point = find_border_pixels(point.x(), point.y(), pixel_value, search_distance/25, self.map_layer)
-                start_drawing_polygon_from_point(border_point, search_distance, self.map_layer, self.canvas)
+                start_drawing_polygon_from_point(border_point, search_distance, self.map_layer, self.canvas, layer_name)
 
                 print(f"Clicked at: {point.x()}, {point.y()}")
             else:
