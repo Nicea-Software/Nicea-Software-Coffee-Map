@@ -9,17 +9,19 @@ import fsPromises from 'fs/promises';
 
 
 async function load_all_geojson_layers() {
-  const geoJsonFiles = {};
+  const geoJsonFiles = [];
   const read_path = path.join(process.cwd(), 'data/geo_json_info/');
 
   try {
     const files = fs.readdirSync(read_path);
     for (const file of files) {
       const geoJsonData = await fsPromises.readFile(read_path + file, 'utf-8');
-      console.log(file)
       const geo_json_info = JSON.parse(geoJsonData);
-      const country_name = file.split('.')[0];
-      geoJsonFiles[country_name] = geo_json_info;
+      const region_name = file.split('.')[0].replace('_', ' ');
+      geoJsonFiles.push({
+          'region_name' : region_name,
+          'geo_json_info' : geo_json_info
+      });
     }
   } catch (err) {
     console.error('Error reading directory:', err);
