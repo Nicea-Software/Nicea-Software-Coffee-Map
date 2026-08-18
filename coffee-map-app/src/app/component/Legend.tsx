@@ -38,8 +38,9 @@ export default function Legend(country_info_list  : Array<CountryInformation>) {
         title.textContent = 'Country List';
         legend_div.appendChild(title); 
         
-
-        country_info_list['country_info_list'].forEach(country_info => {
+        
+        Object.values(country_info_list['country_info_list']).forEach(country_info => {
+          console.log(country_info)
           const parent_div = document.createElement('div')
           parent_div.style.display = 'flex'
           parent_div.style.flexDirection = 'row'

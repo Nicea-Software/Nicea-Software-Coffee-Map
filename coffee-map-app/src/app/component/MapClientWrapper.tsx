@@ -9,6 +9,5 @@ const DynamicMap = dynamic(() => import("./Map"), {
 });
 
 export default function MapClientWrapper({ GeoJsonLayerData }) {
-  // console.log(GeoJsonLayerData)
   return <DynamicMap GeoJsonLayerData={GeoJsonLayerData}   />;
 }

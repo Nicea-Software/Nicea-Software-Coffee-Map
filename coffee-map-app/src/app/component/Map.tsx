@@ -9,53 +9,55 @@ import "leaflet-defaulticon-compatibility";
 import Legend from "./Legend"
 import OtherLinks from './OtherLinks'
 
-// type CountryInformation = {
-//     name: string,
-//     coordinantes: Array<number>,
-//     zoomLevel: number
-//     color: string
-// }
-
-
-
 
 
 const Map = (  {GeoJsonLayerData}  ) => {
   
-  const TempCountryList = [
-    {
-      "name": "Ethopia",
+  const TempCountryList = {
+    "Ethopia" : {
       "coordinates": [9.1450, 40.4897],
       "zoomLevel" :  7,
-      "color" : "red"
+      "color" : "red",
+      "name" : "Ethopia"
     },
-    {
-      "name" : "Nepal",
+    "Nepal" : {
       "coordinates" : [28.00, 84.00],
       "zoomLevel" : 7.5,
-      "color" : "red"
+      "color" : "green",
+      "name" : "Nepal"
     }
-  ]
+  }
   
+  // console.log(TempCountryList[region.country_name])
   return (
     <MapContainer center={[9.1450, 40.4897]} zoom={14} scrollWheelZoom={false} style={{height: "100%", width: "100%"}}>
         <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution="&copy; <a href=&quot;http://osm.org/copyright&quot;>OpenStreetMap</a> contributors"
-        /> 
+            /> 
 
         
 
         {GeoJsonLayerData.map((region) => {
+          console.log("Region")
+          
+          console.log(TempCountryList[region.country_name])
+          // console.log(TempCountryList)
+          
+           const styling = {
+            color : TempCountryList[region.country_name].color
+         }
+         
          const onEachFeature = (feature, layer) => {
-          // console.log(region)
            layer.bindTooltip(region.region_name)
          }
           return(
         
             // <Tooltip key={`${region.country_name}_tooltip`}>
             // </Tooltip>
-            <GeoJSON  onEachFeature={onEachFeature} key={`${region.region_name}`} data={region.geo_json_info} />
+            
+
+            <GeoJSON style={styling} onEachFeature={onEachFeature} key={`${region.region_name}`} data={region.geo_json_info} />
           )
         })}
         <Marker 
