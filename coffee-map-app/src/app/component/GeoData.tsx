@@ -3,14 +3,19 @@ import { GeoJSON } from 'react-leaflet/GeoJSON'
 import fs from 'fs'
 
 
+type GeoJsonFileOutput = {
+  'html' : string,
+  'region_name' : string
+}
+
 
 function load_all_geojson_layers(){
-  const directoryPath = '../../../data/geo_json_info/'
-  const geoJsonFiles = [];
-  // console.log(path.join(process.cwd(), directoryPath))
+  const directoryPath = '../../data/geo_json_info/'
+  const geoJsonFiles : GeoJsonFileOutput[] = [];
+
   try {
-    const files = fs.readdirSync(directoryPath)
-    files.forEach(file => {
+    const files : string[] = fs.readdirSync(directoryPath)
+    files.forEach(file  => {
       let geo_json_info = import (`../../../data/geo_json_info/${file}`)
 
       

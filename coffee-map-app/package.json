@@ -19,9 +19,11 @@
     "leaflet-defaulticon-compatibility": "^0.1.2",
     "leaflet-geosearch": "^4.2.2",
     "next": "^16.2.1",
+    "nextjs": "^0.0.3",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "react-leaflet": "^5.0.0"
+    "react-leaflet": "^5.0.0",
+    "wrangler": "^4.136.3"
   },
   "devDependencies": {
     "@types/node": "^20",
