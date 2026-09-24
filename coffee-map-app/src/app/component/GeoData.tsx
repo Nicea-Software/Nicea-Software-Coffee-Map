@@ -9,18 +9,29 @@ function load_all_geojson_layers(){
   const geoJsonFiles = [];
   // console.log(path.join(process.cwd(), directoryPath))
   try {
+<<<<<<< Updated upstream
     const files = fs.readdirSync(directoryPath)
     files.forEach(file => {
       let geo_json_info = import (`../../../data/geo_json_info/${file}`)
 
+=======
+    const countries : string[] = fs.readdirSync(directoryPath)
+    countries.forEach(country   => {
+      const regionFiles : string[] = fs.readdirSync(directoryPath + '/' + country)
+      regionFiles.forEach(regionFile => {
+          const geo_json_info = import (`../../../data/geo_json_info/${regionFile}`)
+          const region_name = regionFile.split('.')[0];
+          
+          geoJsonFiles.push(
+              {
+                'html' : `<GeoJSON key="${country}" data="${geo_json_info}" />`,
+                'region_name' : region_name
+              }
+          )
+      })
       
-      let region_name = file.split('.')[0];
-      geoJsonFiles.push(
-          {
-            'html' : `<GeoJSON key="${country_name}" data={geo_json_info} />`,
-            'region_name' : region_name
-          }
-      )
+>>>>>>> Stashed changes
+      
     })    
     
   } catch (err) {
