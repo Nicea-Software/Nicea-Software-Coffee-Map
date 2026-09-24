@@ -2,11 +2,15 @@ import { GeoJSON } from 'react-leaflet/GeoJSON'
 
 import fs from 'fs'
 
+type GeoJsonFileOutputType = {
+  html: string,
+  region_name : string
+}
 
 
 function load_all_geojson_layers(){
   const directoryPath = '../../../data/geo_json_info/'
-  const geoJsonFiles = [];
+  const geoJsonFiles : GeoJsonFileOutputType[] = [];
   // console.log(path.join(process.cwd(), directoryPath))
   try {
     const countries : string[] = fs.readdirSync(directoryPath)
