@@ -8,11 +8,14 @@ import "leaflet-defaulticon-compatibility";
 
 import Legend from "./Legend"
 import OtherLinks from './OtherLinks'
+import geoJsonFileMetaData from "../types/GeoJsonFileMetaData"
 
+import GeoJsonFileOutput from '../types/GeoJsonFileOutput'
 
-
-const Map = (  {GeoJsonLayerData}  ) => {
+const Map = (  GeoJsonLayerData : geoJsonFileMetaData[] ) => {
   
+  let geoJsonLayerArray : GeoJsonFileOutput[]  = GeoJsonLayerData['GeoJsonLayerData']['GeoJsonLayerData']
+
   const TempCountryList = {
     "Ethopia" : {
       "coordinates": [9.1450, 40.4897],
@@ -38,11 +41,8 @@ const Map = (  {GeoJsonLayerData}  ) => {
 
         
 
-        {GeoJsonLayerData.map((region) => {
-          console.log("Region")
-          
-          console.log(TempCountryList[region.country_name])
-          // console.log(TempCountryList)
+        {geoJsonLayerArray.map((region : GeoJsonFileOutput ) => {
+  
           
            const styling = {
             color : TempCountryList[region.country_name].color

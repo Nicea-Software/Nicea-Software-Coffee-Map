@@ -41,10 +41,7 @@ async function load_all_geojson_layers() {
 
 
 export default async function Home() {
-  var  geo_json_files  = await load_all_geojson_layers();
-
-  // test = ""
-  // console.log(Object.keys(geo_json_files))
+  const  geo_json_files : geoJsonFileMetaData[]  = await load_all_geojson_layers();
 
   return (
     // give the main element a viewport height so the MapContainer (height: 100%) is visible
